@@ -37,10 +37,6 @@ function statusLabel(status: string) {
   return status === "active" ? "진행 중" : "종료됨";
 }
 
-function isJoinLeaveSystemMessage(content: string) {
-  return /님이 입장했습니다\.?$/.test(content) || /님이 나갔습니다\.?$/.test(content);
-}
-
 export default function ChatPage({
   params,
 }: {
@@ -79,12 +75,6 @@ export default function ChatPage({
   const currentRole = isAdmin ? "admin" : session.role;
   const currentName = isAdmin ? "관리자" : session.displayName;
   const isClosed = room?.status === "closed";
-  const visibleMessages = isAdmin
-    ? messages.filter(
-        (message) =>
-          message.sender_role !== "system" || !isJoinLeaveSystemMessage(message.content)
-      )
-    : messages;
 
   async function handleLeave() {
     // 관리자는 입/퇴장 시스템 메시지를 남기지 않음
@@ -103,7 +93,7 @@ export default function ChatPage({
     document.cookie = "session_id=; path=/; max-age=0";
     document.cookie = "session_role=; path=/; max-age=0";
     document.cookie = "session_name=; path=/; max-age=0";
-    router.push("/");
+    router.push(isAdmin ? "/admin/dashboard" : "/");
   }
 
   if (roomLoading) {
@@ -120,12 +110,18 @@ export default function ChatPage({
       <header className="border-b border-border/60">
         <div className="mx-auto flex w-full max-w-[760px] items-end justify-between gap-4 px-6 py-5 md:px-7">
           <div className="space-y-1">
-            <Link
-              href="/"
-              className="m-0 inline-block text-[1.35rem] font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
-            >
-              SeChat
-            </Link>
+            {isAdmin ? (
+              <Link
+                href="/admin/dashboard"
+                className="m-0 inline-block text-[1.35rem] font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
+              >
+                SeChat
+              </Link>
+            ) : (
+              <h1 className="m-0 text-[1.35rem] font-semibold tracking-tight text-foreground">
+                SeChat
+              </h1>
+            )}
             {room && (
               <p className="m-0 text-sm text-muted-foreground">
                 상담방 {room.code} · {statusLabel(room.status)}
@@ -169,7 +165,7 @@ export default function ChatPage({
 
       {/* Messages */}
       <MessageList
-        messages={visibleMessages}
+        messages={messages}
         currentRole={currentRole}
         loading={loading}
       />
