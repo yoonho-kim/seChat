@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest init:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npx next build:*)",
+      "WebFetch(domain:claude.ai)",
+      "Bash(ls:*)",
+      "Bash(npm run dev:*)"
+    ]
+  }
+}
