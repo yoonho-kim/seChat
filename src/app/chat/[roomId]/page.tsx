@@ -37,6 +37,17 @@ function statusLabel(status: string) {
   return status === "active" ? "진행 중" : "종료됨";
 }
 
+function isAdminJoinLeaveSystemMessage(message: {
+  sender_role: string;
+  content: string;
+}) {
+  if (message.sender_role !== "system") return false;
+
+  const isJoinLeave = /님이 (입장했습니다|나갔습니다)\.?$/.test(message.content);
+  const isAdminRoleLabel = /\((admin|관리자)\)/.test(message.content);
+  return isJoinLeave && isAdminRoleLabel;
+}
+
 export default function ChatPage({
   params,
 }: {
@@ -75,6 +86,9 @@ export default function ChatPage({
   const currentRole = isAdmin ? "admin" : session.role;
   const currentName = isAdmin ? "관리자" : session.displayName;
   const isClosed = room?.status === "closed";
+  const visibleMessages = messages.filter(
+    (message) => !isAdminJoinLeaveSystemMessage(message)
+  );
 
   async function handleLeave() {
     // 관리자는 입/퇴장 시스템 메시지를 남기지 않음
@@ -165,7 +179,7 @@ export default function ChatPage({
 
       {/* Messages */}
       <MessageList
-        messages={messages}
+        messages={visibleMessages}
         currentRole={currentRole}
         loading={loading}
       />
