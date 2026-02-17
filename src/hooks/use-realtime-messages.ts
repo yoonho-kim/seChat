@@ -8,6 +8,7 @@ export interface Message {
   room_id: string;
   sender_role: string;
   sender_name: string;
+  client_message_id: string | null;
   content: string;
   created_at: string;
 }
@@ -48,8 +49,21 @@ export function useRealtimeMessages(roomId: string) {
         (payload) => {
           const newMessage = payload.new as Message;
           setMessages((prev) => {
-            // Replace optimistic message or avoid duplicates
+            // Replace optimistic message by idempotency key and avoid duplicates
             if (prev.some((m) => m.id === newMessage.id)) return prev;
+            if (newMessage.client_message_id) {
+              const optimisticIndex = prev.findIndex(
+                (m) =>
+                  m.id.startsWith("optimistic-") &&
+                  m.client_message_id === newMessage.client_message_id
+              );
+
+              if (optimisticIndex >= 0) {
+                const next = [...prev];
+                next[optimisticIndex] = newMessage;
+                return next;
+              }
+            }
             return [...prev, newMessage];
           });
         }

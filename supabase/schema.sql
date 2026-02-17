@@ -28,8 +28,10 @@ CREATE TABLE messages (
   room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
   sender_role VARCHAR(10) NOT NULL CHECK (sender_role IN ('counselor', 'client', 'admin', 'system')),
   sender_name VARCHAR(100),
+  client_message_id UUID,
   content TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  CONSTRAINT unique_message_per_client UNIQUE (room_id, client_message_id)
 );
 
 -- Global app settings table (admin-managed)
