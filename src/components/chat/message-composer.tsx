@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ export function MessageComposer({
 }) {
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
+  const sendLockRef = useRef(false);
 
   function createClientMessageId() {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -52,11 +53,12 @@ export function MessageComposer({
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    if (!content.trim() || sending) return;
+    if (!content.trim() || sending || sendLockRef.current) return;
 
     const trimmed = content.trim();
     const clientMessageId = createClientMessageId();
     setContent("");
+    sendLockRef.current = true;
 
     // 낙관적 업데이트: 즉시 화면에 반영
     onSend?.({
@@ -88,6 +90,7 @@ export function MessageComposer({
     } catch {
       toast.error("메시지 전송에 실패했습니다");
     } finally {
+      sendLockRef.current = false;
       setSending(false);
     }
   }

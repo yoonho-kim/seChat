@@ -13,6 +13,67 @@ export interface Message {
   created_at: string;
 }
 
+function toTimeValue(value: string) {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function isOptimisticMessage(message: Message) {
+  return message.id.startsWith("optimistic-");
+}
+
+function sortMessages(messages: Message[]) {
+  return [...messages].sort((a, b) => {
+    const timeDiff = toTimeValue(a.created_at) - toTimeValue(b.created_at);
+    if (timeDiff !== 0) return timeDiff;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function dedupeMessages(messages: Message[]) {
+  const byId = new Map<string, Message>();
+  const byClientMessageId = new Map<string, Message>();
+
+  for (const message of sortMessages(messages)) {
+    const existingById = byId.get(message.id);
+    if (existingById) {
+      byId.set(message.id, message);
+      if (message.client_message_id) {
+        byClientMessageId.set(message.client_message_id, message);
+      }
+      continue;
+    }
+
+    const clientMessageId = message.client_message_id;
+    if (!clientMessageId) {
+      byId.set(message.id, message);
+      continue;
+    }
+
+    const existingByClientMessageId = byClientMessageId.get(clientMessageId);
+    if (!existingByClientMessageId) {
+      byClientMessageId.set(clientMessageId, message);
+      byId.set(message.id, message);
+      continue;
+    }
+
+    const shouldReplace =
+      isOptimisticMessage(existingByClientMessageId) && !isOptimisticMessage(message);
+
+    if (shouldReplace) {
+      byId.delete(existingByClientMessageId.id);
+      byClientMessageId.set(clientMessageId, message);
+      byId.set(message.id, message);
+    }
+  }
+
+  return sortMessages(Array.from(byId.values()));
+}
+
+function upsertMessages(prev: Message[], incoming: Message[]) {
+  return dedupeMessages([...prev, ...incoming]);
+}
+
 export function useRealtimeMessages(roomId: string) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,8 +82,8 @@ export function useRealtimeMessages(roomId: string) {
     try {
       const res = await fetch(`/api/rooms/${roomId}/messages`);
       if (res.ok) {
-        const data = await res.json();
-        setMessages(data);
+        const data = (await res.json()) as Message[];
+        setMessages((prev) => upsertMessages(prev, data));
       }
     } finally {
       setLoading(false);
@@ -48,24 +109,7 @@ export function useRealtimeMessages(roomId: string) {
         },
         (payload) => {
           const newMessage = payload.new as Message;
-          setMessages((prev) => {
-            // Replace optimistic message by idempotency key and avoid duplicates
-            if (prev.some((m) => m.id === newMessage.id)) return prev;
-            if (newMessage.client_message_id) {
-              const optimisticIndex = prev.findIndex(
-                (m) =>
-                  m.id.startsWith("optimistic-") &&
-                  m.client_message_id === newMessage.client_message_id
-              );
-
-              if (optimisticIndex >= 0) {
-                const next = [...prev];
-                next[optimisticIndex] = newMessage;
-                return next;
-              }
-            }
-            return [...prev, newMessage];
-          });
+          setMessages((prev) => upsertMessages(prev, [newMessage]));
         }
       )
       .subscribe();
@@ -82,7 +126,7 @@ export function useRealtimeMessages(roomId: string) {
         id: `optimistic-${Date.now()}`,
         created_at: new Date().toISOString(),
       };
-      setMessages((prev) => [...prev, optimistic]);
+      setMessages((prev) => upsertMessages(prev, [optimistic]));
     },
     []
   );
