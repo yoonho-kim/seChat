@@ -65,6 +65,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "인증이 필요합니다" }, { status: 401 });
   }
 
+  let payload: unknown = {};
+  try {
+    payload = await request.json();
+  } catch {
+    payload = {};
+  }
+
+  const adminLabelValue =
+    typeof payload === "object" &&
+    payload !== null &&
+    "adminLabel" in payload &&
+    typeof payload.adminLabel === "string"
+      ? payload.adminLabel.trim()
+      : "";
+
+  if (!adminLabelValue) {
+    return NextResponse.json(
+      { error: "상담 명칭을 입력해 주세요" },
+      { status: 400 }
+    );
+  }
+
+  if (adminLabelValue.length > 120) {
+    return NextResponse.json(
+      { error: "상담 명칭은 120자 이하로 입력해 주세요" },
+      { status: 400 }
+    );
+  }
+
   const supabase = createServiceClient();
 
   // Generate unique 4-digit code with retry
@@ -91,7 +120,10 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await supabase
     .from("rooms")
-    .insert({ code })
+    .insert({
+      code,
+      admin_label: adminLabelValue,
+    })
     .select()
     .single();
 

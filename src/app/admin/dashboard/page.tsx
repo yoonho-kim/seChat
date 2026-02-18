@@ -51,6 +51,7 @@ export default function AdminDashboardPage() {
           </div>
           <div className="flex shrink-0 gap-1.5">
             <CreateRoomDialog onCreated={fetchRooms} />
+            <EntryMessageSettings />
             <Button
               variant="ghost"
               onClick={() => {
@@ -66,7 +67,6 @@ export default function AdminDashboardPage() {
       </header>
       <main className="mx-auto w-full max-w-[920px] px-6 py-8 md:px-7">
         <div className="space-y-8">
-          <EntryMessageSettings />
           {loading ? (
             <p className="text-center text-muted-foreground">상담방 불러오는 중...</p>
           ) : (

@@ -14,6 +14,7 @@ interface Participant {
 interface Room {
   id: string;
   code: string;
+  admin_label: string | null;
   status: string;
   created_at: string;
   closed_at: string | null;
@@ -76,6 +77,9 @@ export function RoomTable({
         <article key={room.id} className="space-y-3 px-1 py-6 md:px-2">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
+              <p className="m-0 text-sm font-medium text-foreground">
+                {room.admin_label || "미지정 상담"}
+              </p>
               <p className="m-0 text-2xl font-mono tracking-[0.08em]">
                 {room.code}
               </p>

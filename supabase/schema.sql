@@ -5,6 +5,7 @@
 CREATE TABLE rooms (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   code VARCHAR(4) NOT NULL,
+  admin_label VARCHAR(120),
   status VARCHAR(10) DEFAULT 'active' CHECK (status IN ('active', 'closed')),
   created_at TIMESTAMPTZ DEFAULT now(),
   closed_at TIMESTAMPTZ,
